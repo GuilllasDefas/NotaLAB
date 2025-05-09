@@ -65,3 +65,39 @@ def separar_stems(caminho, saida='stems'):
     sep.separate_to_file(caminho, saida)
     return f"Stems salvos em '{saida}'"
 
+# Gera linhas de harmonia para corais (Soprano, Contralto, Tenor)
+# notas_por_voz: dict com chaves 'Soprano','Contralto','Tenor' e valores listas de tuplas (nota, duração)
+
+def montar_harmonia(notas_por_voz):
+    partitura = stream.Score()
+    for voz, sequencia in notas_por_voz.items():
+        parte = stream.Part()
+        parte.id = voz
+        for grau, dur in sequencia:
+            n = note.Note(grau)
+            n.quarterLength = dur
+            parte.append(n)
+        partitura.append(parte)
+    return partitura
+
+if __name__ == '__main__':
+    # Exemplo de uso:
+    audio = 'minha_musica.mp3'
+    sinal, taxa = carregar_audio(audio)
+
+    print('Tom:', detectar_tom(sinal, taxa))
+    print('BPM:', detectar_bpm(sinal, taxa))
+
+    acordes_idx = detectar_acordes(sinal, taxa)
+    print('Acordes (índices):', acordes_idx)
+
+    print(separar_stems(audio))
+
+    # Exemplo de harmonia manual:
+    exemplo = {
+        'Soprano': [('C4', 1), ('E4', 1)],
+        'Contralto':    [('A3', 1), ('B3', 1)],
+        'Tenor':   [('F3', 1), ('G3', 1)]
+    }
+    part = montar_harmonia(exemplo)
+    part.show('text')  # mostra no console
