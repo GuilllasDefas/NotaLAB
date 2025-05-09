@@ -1,15 +1,41 @@
 """
 Módulo para funções relacionadas a harmonia e extração de notas.
+
+DICAS PARA AJUSTAR RITMO, TEMPO E DURAÇÃO DAS NOTAS:
+
+- min_dur (float): Duração mínima em segundos para considerar uma nota.
+    * AUMENTAR: ignora notas rápidas, só pega notas longas/sustentadas, ritmo mais "limpo".
+    * DIMINUIR: captura mais notas rápidas, trinados, ornamentos, ritmo mais detalhado.
+
+- pre_max, post_max, pre_avg, post_avg (onset_detect): Janelas para detectar início das notas.
+    * VALORES MAIORES: menos notas detectadas, só ataques fortes.
+    * VALORES MENORES: mais notas detectadas, sensível a pequenas variações.
+
+- delta (onset_detect): Sensibilidade à diferença de energia para detectar início de nota.
+    * MAIOR: só pega notas com ataque forte, ritmo simplificado.
+    * MENOR: pega até ataques suaves, ritmo mais fragmentado.
+
+- wait (onset_detect): Tempo mínimo entre notas detectadas.
+    * MAIOR: evita notas muito próximas, ritmo mais "quadrado".
+    * MENOR: permite notas rápidas em sequência, ritmo mais detalhado.
+
+- Agrupamento de notas iguais (limite_agrupamento):
+    * MAIOR: notas longas, menos detalhes rítmicos.
+    * MENOR: notas curtas, mais detalhes rítmicos.
+
+- bpm: Batidas por minuto.
+    * Se o BPM detectado estiver errado, todas as durações ficarão desproporcionais.
+    * quarterLength = duração_em_segundos * (BPM/60)
 """
 import numpy as np
 import librosa
-import scipy
 from music21 import pitch
 from notalab.audio import carregar_audio
 
 def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C', modo='maior'):
     '''
     Extrai notas vocais aderindo à escala do tom detectado, mas preservando os nuances da melodia.
+    Veja o comentário do módulo para dicas de ajuste de ritmo e duração.
     
     Args:
         caminho_vocal (str): Caminho para o arquivo de áudio vocal
@@ -78,7 +104,7 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
         post_avg=0.03,         # 50ms de janela para média depois
         delta=0.04,            # 4% de diferença de energia
         wait=0.01              # 10ms de espera mínima entre onsets
-    ) 
+    )
     
     # Se temos poucos onsets, tentar novamente com parâmetros ainda mais sensíveis
     # Parâmetros mais agressivos para capturar nuances mais sutis
@@ -167,7 +193,7 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
                     # Energia mínima para considerar um trecho como nota
                     # → MAIOR (>0.01): Ignora sons fracos, só detecta notas cantadas com clareza
                     # → MENOR (<0.01): Capta sons mais suaves, incluindo respirações e ruídos
-                    if rms > 0.012:  # Se tiver energia mínima, tenta forçar para a escala
+                    if rms > 0.01:  # Se tiver energia mínima, tenta forçar para a escala
                         notas_com_duracao.append((nota_mais_proxima, duracao_quarter))
                     else:
                         notas_com_duracao.append(('rest', duracao_quarter))
