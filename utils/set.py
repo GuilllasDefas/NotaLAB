@@ -13,6 +13,10 @@ def selecionar_arquivo():
     root = tk.Tk()
     root.withdraw()
     
+    # Exibe a janela principal e mantém ela no topo
+    root.deiconify()
+    root.attributes('-topmost', True)  # Mantém a janela sempre no topo
+    
     # Define os tipos de arquivos de áudio suportados
     tipos_arquivo = [
         ('Arquivos de Áudio', '*.mp3 *.wav *.flac *.ogg *.m4a'),
