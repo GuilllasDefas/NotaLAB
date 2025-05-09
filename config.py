@@ -24,7 +24,8 @@ detalhadas sobre cada um, seus efeitos e valores recomendados.
 # → VALOR INTERMEDIÁRIO (0.04-0.05):
 #     • Equilíbrio entre detalhes e notas principais
 #     • RECOMENDADO PARA: Música pop, rock, a maioria das vozes
-SENSIBILIDADE_ONSET = 0.04
+SENSIBILIDADE_ONSET = 0.035 # Para 99 bpm mais de 0.4 está errando muito
+# → OBSERVAÇÃO: Para músicas com BPM muito baixo, considere aumentar o valor
 
 # Duração mínima de uma nota em segundos (para considerar como nota válida)
 # → AUMENTAR (0.1-0.2): 
@@ -36,7 +37,7 @@ SENSIBILIDADE_ONSET = 0.04
 #     • RECOMENDADO PARA: Passagens rápidas, músicas virtuosas
 #     • EXEMPLO: Para um solo de violino com muitas notas rápidas, use 0.03
 # → RELAÇÃO COM BPM: Para músicas rápidas (>120 BPM), use valores menores
-MIN_DURACAO_NOTA = 0.05
+MIN_DURACAO_NOTA = 0.02
 
 # Limite para agrupar notas iguais consecutivas (em tempos musicais)
 # → AUMENTAR (5-8): 
@@ -59,7 +60,8 @@ LIMITE_AGRUPAMENTO = 3
 #     • Preserva nuances de tempo e rubato, mais expressivo
 #     • RECOMENDADO PARA: Música clássica, jazz, performances solo
 #     • EXEMPLO: Para uma sonata de piano com rubato, desative
-QUANTIZAR = True
+
+QUANTIZAR = True # True tem acertado mais
 
 # Grade de quantização rítmica (se QUANTIZAR = True)
 # → VALORES MAIS BAIXOS (4): 
@@ -79,6 +81,7 @@ QUANTIZAR = True
 #     • RECOMENDADO PARA: Música muito rápida, técnica, virtuosa
 #     • EXEMPLO: Para uma música eletrônica em 140+ BPM, use 32
 GRADE_QUANTIZACAO = 16
+# → OBSERVAÇÃO: Para BPM muito baixo, considere aumentar o valor
 
 #=== PARÂMETROS AVANÇADOS DE DETECÇÃO DE ONSETS ===
 
@@ -91,7 +94,7 @@ GRADE_QUANTIZACAO = 16
 #     • Separa cada pequeno ataque, mais preciso em passagens rápidas
 #     • RECOMENDADO PARA: Música com muitas articulações, staccato
 #     • EXEMPLO: Para capturar cada nota de uma passagem rápida de piano, use 0.01
-PRE_MAX = 0.01
+PRE_MAX = 0.03
 
 # Janela DEPOIS do ponto para buscar máximo local (em segundos)
 # → AUMENTAR (0.03-0.05): 
@@ -136,7 +139,7 @@ POST_AVG = 0.03
 #     • RECOMENDADO PARA: Músicas virtuosas, passagens muito rápidas
 #     • EXEMPLO: Para um trecho com 32 notas por compasso, use 0.01
 # → RELAÇÃO COM BPM: Para BPM > 140, use valores menores (≤ 0.01)
-WAIT = 0.01
+WAIT = 0.03
 
 #=== PARÂMETROS DE ANÁLISE ESPECTRAL ===
 
@@ -171,7 +174,7 @@ FMAX = 1047.0  # C6 em Hz
 #     • Mais liberal, menos pausas, capta respirações e transições
 #     • RECOMENDADO PARA: Gravações limpas, vozes suaves ou sussurradas
 #     • EXEMPLO: Para uma voz muito suave ou sussurrada, use 0.35
-VOICED_THRESHOLD = 0.4
+VOICED_THRESHOLD = 0.45
 
 # Tolerância máxima de distância de frequência para aceitar nota na escala (%)
 # → AUMENTAR (0.15-0.2): 
@@ -182,15 +185,48 @@ VOICED_THRESHOLD = 0.4
 #     • Exige afinação mais precisa, mais rigoroso
 #     • RECOMENDADO PARA: Cantores profissionais, música clássica
 #     • EXEMPLO: Para um cantor de ópera profissional, use 0.08 (8% de tolerância)
-TOLERANCIA_AFINACAO = 0.15
+TOLERANCIA_AFINACAO = 0.1
 
+"""
+===== GUIA DE CONFIGURAÇÕES POR CASO DE USO =====
+
+* MÚSICA COM MUITOS ORNAMENTOS E TRINADOS:
+  - sensibilidade_onset: 0.02-0.03 (mais sensível)
+  - min_duracao: 0.03-0.04 (permite notas curtas)
+  - limite_agrupamento: 1 (preserva cada nota)
+  - quantizar: False (preserva timing original)
+
+* VOZ COM VIBRATO INTENSO:
+  - sensibilidade_onset: 0.04-0.05 (moderado)
+  - pre_avg/post_avg: 0.1-0.15 (maiores, para ignorar ciclos do vibrato)
+  - min_duracao: 0.06-0.08 (ignora fragmentos do vibrato)
+  - limite_agrupamento: 3-4 (agrupa moderadamente)
+
+* MÚSICA COM NOTAS STACCATO:
+  - sensibilidade_onset: 0.03-0.04 (moderada sensibilidade)
+  - wait: 0.01 (permite notas próximas)
+  - min_duracao: 0.03-0.04 (permite notas curtas)
+  - limite_agrupamento: 1 (preserva cada nota)
+
+* MELODIA LENTA E SUSTENTADA:
+  - sensibilidade_onset: 0.05-0.06 (menos sensível)
+  - min_duracao: 0.1-0.15 (ignora pequenas variações)
+  - limite_agrupamento: 5-6 (agrupa notas longas)
+  - grade_quantizacao: 8 (colcheias são suficientes)
+
+* VOZ COM MUITAS NOTAS RÁPIDAS E PASSAGENS:
+  - sensibilidade_onset: 0.03 (mais sensível)
+  - pre_max/post_max: 0.01 (detecta notas próximas) 
+  - min_duracao: 0.03 (permite notas muito curtas)
+  - grade_quantizacao: 32 (para capturar ritmos complexos)
+"""
 #=== CONFIGURAÇÕES POR TIPO DE MÚSICA ===
 
 # Configurações recomendadas para diferentes estilos
 CONFIGS_POR_ESTILO = {
     'vocal': {
         'sensibilidade_onset': 0.04,
-        'min_duracao': 0.05,
+        'min_duracao': 0.03,
         'limite_agrupamento': 3,
         'quantizar': True,
         'grade_quantizacao': 16
@@ -252,40 +288,6 @@ CONFIGS_POR_ESTILO = {
         'grade_quantizacao': 32
     }
 }
-
-"""
-===== GUIA DE CONFIGURAÇÕES POR CASO DE USO =====
-
-* MÚSICA COM MUITOS ORNAMENTOS E TRINADOS:
-  - sensibilidade_onset: 0.02-0.03 (mais sensível)
-  - min_duracao: 0.03-0.04 (permite notas curtas)
-  - limite_agrupamento: 1 (preserva cada nota)
-  - quantizar: False (preserva timing original)
-
-* VOZ COM VIBRATO INTENSO:
-  - sensibilidade_onset: 0.04-0.05 (moderado)
-  - pre_avg/post_avg: 0.1-0.15 (maiores, para ignorar ciclos do vibrato)
-  - min_duracao: 0.06-0.08 (ignora fragmentos do vibrato)
-  - limite_agrupamento: 3-4 (agrupa moderadamente)
-
-* MÚSICA COM NOTAS STACCATO:
-  - sensibilidade_onset: 0.03-0.04 (moderada sensibilidade)
-  - wait: 0.01 (permite notas próximas)
-  - min_duracao: 0.03-0.04 (permite notas curtas)
-  - limite_agrupamento: 1 (preserva cada nota)
-
-* MELODIA LENTA E SUSTENTADA:
-  - sensibilidade_onset: 0.05-0.06 (menos sensível)
-  - min_duracao: 0.1-0.15 (ignora pequenas variações)
-  - limite_agrupamento: 5-6 (agrupa notas longas)
-  - grade_quantizacao: 8 (colcheias são suficientes)
-
-* VOZ COM MUITAS NOTAS RÁPIDAS E PASSAGENS:
-  - sensibilidade_onset: 0.03 (mais sensível)
-  - pre_max/post_max: 0.01 (detecta notas próximas) 
-  - min_duracao: 0.03 (permite notas muito curtas)
-  - grade_quantizacao: 32 (para capturar ritmos complexos)
-"""
 
 def obter_config_para_estilo(estilo, bpm=None):
     """Retorna configurações recomendadas para o estilo musical

@@ -1,0 +1,11 @@
+Problemas
+
+- A detecção ainda depende de muitos parâmetros manuais
+- A detecção oitava vozes masculinas para baixo sempre
+- A detecção de harmonia não está acontecendo, apenas a melodia
+- A Janela pra escolher arquivo antes de abrir mostra uma mini janela vazia
+
+Implementar depois
+
+- Extrair acordes da música criando um arquivo .mid
+- 

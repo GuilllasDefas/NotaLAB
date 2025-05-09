@@ -13,7 +13,6 @@ import warnings
 
 warnings.filterwarnings("ignore", message="n_fft=1024 is too large for input signal")
 warnings.filterwarnings("ignore", message="n_fft=256 is too large for input signal")
-warnings.filterwarnings("ignore", message="WARNING:tensorflow:From")
 """
 Script principal do NotaLAB - Ferramenta de análise e geração musical
 
