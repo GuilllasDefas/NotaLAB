@@ -68,7 +68,7 @@ def main():
         # Gerar partitura com as harmonias
         partitura = montar_harmonia(harmonias)
         partitura.show('text')  # mostra no console
-        partitura.write('midi', 'harmonias_vocais.pdf')
+        partitura.write('pdf', 'harmonias_vocais.pdf')
     else:
         print("Não foi possível extrair notas do vocal.")
 
