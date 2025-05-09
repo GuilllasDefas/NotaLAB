@@ -13,3 +13,26 @@ def carregar_audio(caminho, sr=44100):
     sinal, taxa = librosa.load(caminho, sr=sr)
     return sinal, taxa
 
+# Detecta a nota principal (tom) usando cromagrama
+# sinal: áudio carregado, taxa: taxa de amostragem
+# retorna nota base (ex: 'C', 'D#', 'F#')
+def detectar_tom(sinal, taxa):
+    '''
+    1. Cálculo do cromagrama:
+    Ela utiliza librosa.feature.chroma_cqt para transformar o áudio em um cromagrama, 
+    que é uma representação gráfica da intensidade (energia) de cada uma das 12 notas musicais ao longo do tempo.
+
+    2. Média de energia:
+    Em seguida, calcula a média dos valores de energia para cada nota (linha) do cromagrama. 
+    Dessa forma, ela obtém um valor que representa a intensidade média de cada nota no áudio.
+
+    3. Seleção da nota principal:
+    É criada uma lista com as 12 notas musicais (de C a B, incluindo sustenidos). 
+    Pela função np.argmax, é identificado qual nota possui a maior energia média, 
+    e essa nota é escolhida como o "tom" principal do áudio.
+    '''
+    cromagrama = librosa.feature.chroma_cqt(y=sinal, sr=taxa)
+    media = cromagrama.mean(axis=1)
+    notas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    tom = notas[int(np.argmax(media))]
+    return tom
