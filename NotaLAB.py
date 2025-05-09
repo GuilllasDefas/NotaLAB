@@ -41,3 +41,27 @@ def detectar_tom(sinal, taxa):
 def detectar_bpm(sinal, taxa):
     bpm, _ = librosa.beat.beat_track(y=sinal, sr=taxa)
     return round(bpm)
+
+
+# Extrai acordes simples por batida
+# retorna lista de índices de notas (0=C, 1=C#, ..., 11=B)
+def detectar_acordes(sinal, taxa):
+    _, batidas = librosa.beat.beat_track(y=sinal, sr=taxa)
+    amostras = librosa.frames_to_samples(batidas)
+    acordes = []
+    for i in range(len(amostras)-1):
+        trecho = sinal[amostras[i]:amostras[i+1]]
+        crom = librosa.feature.chroma_cqt(y=trecho, sr=taxa).mean(axis=1)
+        raiz = int(np.argmax(crom))
+        acordes.append(raiz)
+    return acordes
+
+# Separa vozes (vocal, baixo, bateria, outros)
+# caminho: arquivo de origem, 
+# saida: pasta para stems
+
+def separar_stems(caminho, saida='stems'):
+    sep = Separator('spleeter:4stems')
+    sep.separate_to_file(caminho, saida)
+    return f"Stems salvos em '{saida}'"
+
