@@ -93,7 +93,9 @@ def main():
         post_max=params_otimizados['post_max'],
         pre_avg=params_otimizados['pre_avg'],
         post_avg=params_otimizados['post_avg'],
-        wait=params_otimizados['wait']
+        wait=params_otimizados['wait'],
+        processar_audio_completo=params_otimizados.get('processar_audio_completo', True),
+        tamanho_segmento=params_otimizados.get('tamanho_segmento', 0)
     )
     
     # Filtragem apenas se houver notas e a filtragem estiver habilitada

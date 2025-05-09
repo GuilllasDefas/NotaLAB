@@ -46,7 +46,8 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=config.MIN_DUR
                         quantizar=config.QUANTIZAR, grade_quantizacao=config.GRADE_QUANTIZACAO,
                         pre_max=config.PRE_MAX, post_max=config.POST_MAX, 
                         pre_avg=config.PRE_AVG, post_avg=config.POST_AVG, 
-                        wait=config.WAIT):
+                        wait=config.WAIT, processar_audio_completo=True, 
+                        tamanho_segmento=0):
     '''
     Extrai notas vocais com ajustes para melhorar a precisão rítmica.
     Todos os parâmetros de configuração estão documentados em config.py
@@ -54,6 +55,16 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=config.MIN_DUR
     # Carregar e normalizar áudio
     sinal, taxa = carregar_audio(caminho_vocal, sr)
     sinal = librosa.util.normalize(sinal)
+    
+    # Verificar duração total do áudio
+    duracao_total = librosa.get_duration(y=sinal, sr=taxa)
+    print(f"Duração do arquivo de áudio: {duracao_total:.2f} segundos")
+    
+    # Decidir como processar baseado nos parâmetros
+    if not processar_audio_completo or tamanho_segmento > 0:
+        print("AVISO: Processando apenas parte do áudio. Resultados podem ser incompletos.")
+        if tamanho_segmento > 0:
+            sinal = sinal[:int(tamanho_segmento * taxa)]
     
     # Definir escala baseada no tom e modo
     notas_map = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -87,24 +98,29 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=config.MIN_DUR
         wait=wait
     )
     
-    # Se temos poucos onsets, tentar novamente com parâmetros ainda mais sensíveis
-    if len(onsets) < 10:
+    # Se temos poucos onsets em relação à duração, tentar novamente mais sensível
+    densidade_onset = len(onsets) / duracao_total if duracao_total > 0 else 0
+    esperado_min = duracao_total / 4  # Espera pelo menos uma nota a cada 4 segundos
+    
+    if len(onsets) < esperado_min:
+        print(f"Poucos onsets detectados ({len(onsets)}). Tentando com parâmetros mais sensíveis...")
         onsets = librosa.onset.onset_detect(
             y=sinal,
             sr=taxa,
             units='time',
             backtrack=True,
-            pre_max=0.01,      # Reduzido: mais sensível a picos locais
-            post_max=0.01,     # Reduzido: mais sensível a picos locais
-            pre_avg=0.03,      # Reduzido: janela menor para média = mais sensível
-            post_avg=0.03,     # Reduzido: janela menor para média = mais sensível
-            delta=0.03,        # Reduzido: aceita diferenças de energia menores
-            wait=0.01          # Mantido: ainda precisamos separar notas distintas
+            pre_max=0.01,
+            post_max=0.01,
+            pre_avg=0.03,
+            post_avg=0.03,
+            delta=0.025,
+            wait=0.01
         )
+        print(f"Após ajuste: {len(onsets)} onsets detectados")
     
     # Adicionar o início e fim do áudio
     onsets = np.append(np.array([0]), onsets)
-    onsets = np.append(onsets, librosa.get_duration(y=sinal, sr=taxa))
+    onsets = np.append(onsets, duracao_total)
     
     # Processar cada segmento entre onsets
     notas_com_duracao = []

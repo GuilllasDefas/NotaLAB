@@ -342,7 +342,9 @@ def analisar_e_ajustar_parametros(sinal, taxa, bpm, tonica=None, modo=None):
         'post_avg': POST_AVG,
         'wait': WAIT,
         'voiced_threshold': VOICED_THRESHOLD,
-        'remover_falsos_positivos': False
+        'remover_falsos_positivos': False,
+        'processar_audio_completo': True,
+        'tamanho_segmento': 0  # 0 = processar arquivo inteiro
     }
     
     # 1. Análise de densidade rítmica
