@@ -8,6 +8,7 @@ from notalab.notacao import montar_harmonia, montar_acordes
 from notalab.harmonia import extrair_notas_vocal, gerar_harmonias_vocais
 from utils.set import selecionar_arquivo
 from music21 import midi
+import config
 import warnings
 
 warnings.filterwarnings("ignore", message="n_fft=1024 is too large for input signal")
@@ -15,10 +16,13 @@ warnings.filterwarnings("ignore", message="n_fft=256 is too large for input sign
 warnings.filterwarnings("ignore", message="WARNING:tensorflow:From")
 """
 Script principal do NotaLAB - Ferramenta de análise e geração musical
+
+Para ajustar parâmetros, edite o arquivo config.py que contém todas as 
+configurações centralizadas com explicações detalhadas.
 """
 
 def main():
-    print("=== NotaLAB - Análise e Geração Musical ===\n")
+    print("\n=== NotaLAB - Análise e Geração Musical ===\n")
     
     # Solicitar ao usuário que selecione o arquivo de áudio
     caminho_audio = selecionar_arquivo()
@@ -66,7 +70,40 @@ def main():
     
     # Extrair notas do vocal e gerar harmonias automáticas
     print("\nExtraindo notas do vocal e gerando harmonias...")
-    notas_melodia = extrair_notas_vocal(caminho_vocal, bpm=bpm, tom=tonica, modo=modo)
+    
+    # Opção 1: Usar as configurações do config.py
+    notas_melodia = extrair_notas_vocal(
+        caminho_vocal, 
+        bpm=bpm, 
+        tom=tonica, 
+        modo=modo,
+        sensibilidade_onset=config.SENSIBILIDADE_ONSET,
+        limite_agrupamento=config.LIMITE_AGRUPAMENTO,
+        min_dur=config.MIN_DURACAO_NOTA,
+        quantizar=config.QUANTIZAR,
+        grade_quantizacao=config.GRADE_QUANTIZACAO,
+        # Parâmetros avançados
+        pre_max=config.PRE_MAX,
+        post_max=config.POST_MAX,
+        pre_avg=config.PRE_AVG,
+        post_avg=config.POST_AVG,
+        wait=config.WAIT
+    )
+    
+    # Opção 2: Usar configurações específicas de estilo (descomente para usar)
+    # estilo = 'pop'  # Escolha: 'vocal', 'pop', 'jazz', 'classica', 'folk', etc.
+    # config_estilo = config.obter_config_para_estilo(estilo, bpm)
+    # notas_melodia = extrair_notas_vocal(
+    #     caminho_vocal, 
+    #     bpm=bpm, 
+    #     tom=tonica, 
+    #     modo=modo,
+    #     sensibilidade_onset=config_estilo['sensibilidade_onset'],
+    #     limite_agrupamento=config_estilo['limite_agrupamento'],
+    #     min_dur=config_estilo['min_duracao'],
+    #     quantizar=config_estilo['quantizar'],
+    #     grade_quantizacao=config_estilo['grade_quantizacao']
+    # )
     
     if notas_melodia:
         print(f"Extraídas {len(notas_melodia)} notas da melodia vocal")

@@ -1,58 +1,55 @@
-"""
-Módulo para funções relacionadas a harmonia e extração de notas.
-
-DICAS PARA AJUSTAR RITMO, TEMPO E DURAÇÃO DAS NOTAS:
-
-- min_dur (float): Duração mínima em segundos para considerar uma nota.
-    * AUMENTAR: ignora notas rápidas, só pega notas longas/sustentadas, ritmo mais "limpo".
-    * DIMINUIR: captura mais notas rápidas, trinados, ornamentos, ritmo mais detalhado.
-
-- pre_max, post_max, pre_avg, post_avg (onset_detect): Janelas para detectar início das notas.
-    * VALORES MAIORES: menos notas detectadas, só ataques fortes.
-    * VALORES MENORES: mais notas detectadas, sensível a pequenas variações.
-
-- delta (onset_detect): Sensibilidade à diferença de energia para detectar início de nota.
-    * MAIOR: só pega notas com ataque forte, ritmo simplificado.
-    * MENOR: pega até ataques suaves, ritmo mais fragmentado.
-
-- wait (onset_detect): Tempo mínimo entre notas detectadas.
-    * MAIOR: evita notas muito próximas, ritmo mais "quadrado".
-    * MENOR: permite notas rápidas em sequência, ritmo mais detalhado.
-
-- Agrupamento de notas iguais (limite_agrupamento):
-    * MAIOR: notas longas, menos detalhes rítmicos.
-    * MENOR: notas curtas, mais detalhes rítmicos.
-
-- bpm: Batidas por minuto.
-    * Se o BPM detectado estiver errado, todas as durações ficarão desproporcionais.
-    * quarterLength = duração_em_segundos * (BPM/60)
-"""
 import numpy as np
 import librosa
 from music21 import pitch
 from notalab.audio import carregar_audio
+import config
 
-def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C', modo='maior'):
+def quantizar_notas(notas_duracao, bpm, grade=16, ativar=True):
     '''
-    Extrai notas vocais aderindo à escala do tom detectado, mas preservando os nuances da melodia.
-    Veja o comentário do módulo para dicas de ajuste de ritmo e duração.
+    Quantiza as notas para alinhá-las à grade musical.
     
     Args:
-        caminho_vocal (str): Caminho para o arquivo de áudio vocal
-        sr (int): Taxa de amostragem em Hz.
-                  → MAIOR: captará sons mais agudos, mas usa mais memória
-                  → MENOR: processamento mais rápido, perde detalhes agudos
-        bpm (int): Batidas por minuto da música.
-                  → MAIOR: notas terão durações menores no MIDI
-                  → MENOR: notas terão durações maiores no MIDI
-        min_dur (float): Duração mínima em segundos para uma nota ser considerada.
-                  → MAIOR: ignora notas rápidas, reduz ruídos, menos notas no total
-                  → MENOR: captura ornamentos e notas rápidas, mais notas no total
-        tom (str): Nota tônica da música (ex: 'C', 'D#')
-        modo (str): Modo da escala ('maior' ou 'menor')
-    
+        notas_duracao (list): Lista de tuplas (nota, duração)
+        bpm (int): Andamento em batidas por minuto
+        grade (int): Divisão da grade musical (4=semínimas, 8=colcheias, 16=semicolcheias)
+        ativar (bool): Se False, retorna as notas inalteradas
+        
     Returns:
-        list: Lista de tuplas (nota, duração) com as notas detectadas
+        list: Lista de tuplas (nota, duração) com ritmo quantizado
+    '''
+    if not ativar or not notas_duracao:
+        return notas_duracao
+        
+    # Valor de uma batida em quarter notes
+    beat_duration = 1.0
+    
+    # Duração de uma unidade da grade (em quarter notes)
+    grid_unit = beat_duration / (grade / 4)
+    
+    # Processar cada nota
+    quantizadas = []
+    for nota, duracao in notas_duracao:
+        # Quantizar posição: arredondar para o múltiplo mais próximo de grid_unit
+        qnt_duracao = round(duracao / grid_unit) * grid_unit
+        
+        # Evitar notas com duração zero
+        if qnt_duracao < grid_unit:
+            qnt_duracao = grid_unit
+            
+        quantizadas.append((nota, qnt_duracao))
+    
+    return quantizadas
+
+def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=config.MIN_DURACAO_NOTA, 
+                        tom='C', modo='maior', sensibilidade_onset=config.SENSIBILIDADE_ONSET, 
+                        limite_agrupamento=config.LIMITE_AGRUPAMENTO, 
+                        quantizar=config.QUANTIZAR, grade_quantizacao=config.GRADE_QUANTIZACAO,
+                        pre_max=config.PRE_MAX, post_max=config.POST_MAX, 
+                        pre_avg=config.PRE_AVG, post_avg=config.POST_AVG, 
+                        wait=config.WAIT):
+    '''
+    Extrai notas vocais com ajustes para melhorar a precisão rítmica.
+    Todos os parâmetros de configuração estão documentados em config.py
     '''
     # Carregar e normalizar áudio
     sinal, taxa = carregar_audio(caminho_vocal, sr)
@@ -76,38 +73,21 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
             nota_completa = f"{nota_nome}{oitava}"
             freq_notas[nota_completa] = librosa.note_to_hz(nota_completa)
     
-    # Detectar onsets com parâmetros mais sensíveis para capturar mais nuances
-    # PARÂMETROS DE DETECÇÃO DO INÍCIO DAS NOTAS:
-    # pre_max/post_max: Janelas de tempo para encontrar inícios de notas
-    #   → MAIOR: Ignora inícios de notas próximos, resultando em menos notas
-    #   → MENOR: Detecta mais inícios, resultando em mais notas separadas
-    #
-    # pre_avg/post_avg: Janelas para calcular a média de energia
-    #   → MAIOR: Ignora pequenas variações, menos sensível a vibratos/tremulos
-    #   → MENOR: Captura pequenas mudanças de volume, mais sensível a nuances
-    #
-    # delta: Diferença de energia necessária para considerar o início de uma nota
-    #   → MAIOR: Só detecta notas com ataques fortes/evidentes
-    #   → MENOR: Detecta notas com ataques suaves, mas pode pegar ruídos
-    #
-    # wait: Tempo mínimo entre notas consecutivas
-    #   → MAIOR: Evita notas muito próximas, menos notas no total
-    #   → MENOR: Permite notas muito rápidas em sequência, mais notas no total
+    # Detectar onsets com parâmetros configuráveis
     onsets = librosa.onset.onset_detect(
         y=sinal,
         sr=taxa,
         units='time',
-        backtrack=True,        # Ajusta onset para o início real do transiente
-        pre_max=0.02,          # 20ms antes
-        post_max=0.02,         # 20ms depois
-        pre_avg=0.04,          # 50ms de janela para média antes
-        post_avg=0.03,         # 50ms de janela para média depois
-        delta=0.04,            # 4% de diferença de energia
-        wait=0.01              # 10ms de espera mínima entre onsets
+        backtrack=True,
+        pre_max=pre_max,
+        post_max=post_max,
+        pre_avg=pre_avg,
+        post_avg=post_avg,
+        delta=sensibilidade_onset,
+        wait=wait
     )
     
     # Se temos poucos onsets, tentar novamente com parâmetros ainda mais sensíveis
-    # Parâmetros mais agressivos para capturar nuances mais sutis
     if len(onsets) < 10:
         onsets = librosa.onset.onset_detect(
             y=sinal,
@@ -146,14 +126,6 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
         duracao_quarter = duracao * (bpm/60)
         
         # Análise de frequência fundamental com threshold mais baixo
-        # CONFIGURAÇÕES DE DETECÇÃO DE ALTURA/AFINAÇÃO:
-        # fmin/fmax: Limites das notas que serão detectadas
-        #   → MAIOR FAIXA (C1-C7): Detecta notas muito graves e muito agudas
-        #   → MENOR FAIXA (C3-C5): Foca apenas na região central da voz
-        #
-        # voiced_prob: Confiança mínima para considerar que é uma nota cantada
-        #   → MAIOR (>0.5): Só aceita trechos claramente cantados, menos notas
-        #   → MENOR (<0.5): Aceita sons menos definidos como notas, mais notas
         f0, voiced_flag, voiced_prob = librosa.pyin(
             segmento,
             fmin=librosa.note_to_hz('C2'),  # Limite inferior: C2 (aprox. 65Hz)
@@ -163,9 +135,6 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
         )
         
         # Threshold mais baixo para detectar mais nuances (0.4 em vez de 0.6)
-        # Filtro de probabilidade para frames vocais
-        # - Aumentar o threshold (>0.4): menos notas, maior precisão
-        # - Diminuir o threshold (<0.4): mais notas, menor precisão
         if f0 is not None and np.any(voiced_flag):
             valid_f0 = f0[voiced_flag & (voiced_prob > 0.4)]
             
@@ -183,16 +152,11 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
                         nota_mais_proxima = nota
                 
                 # Tolerância para considerar uma nota válida
-                # → MAIOR (>0.15): Aceita notas mais "desafinadas", mais flexível
-                # → MENOR (<0.15): Exige notas bem afinadas, mais rigoroso, menos notas
                 if menor_distancia < 0.15:
                     notas_com_duracao.append((nota_mais_proxima, duracao_quarter))
                 else:
                     # Verificar se há energia suficiente para ser uma nota
                     rms = np.sqrt(np.mean(segmento**2))
-                    # Energia mínima para considerar um trecho como nota
-                    # → MAIOR (>0.01): Ignora sons fracos, só detecta notas cantadas com clareza
-                    # → MENOR (<0.01): Capta sons mais suaves, incluindo respirações e ruídos
                     if rms > 0.01:  # Se tiver energia mínima, tenta forçar para a escala
                         notas_com_duracao.append((nota_mais_proxima, duracao_quarter))
                     else:
@@ -209,16 +173,14 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
     notas_processadas = []
     nota_atual, dur_atual = notas_com_duracao[0]
     
-    # Limite para juntar notas iguais consecutivas
-    # → MAIOR (>4): Junta mais notas iguais, criando notas mais longas
-    # → MENOR (<4): Mantém as notas separadas, preservando o ritmo original
-    limite_agrupamento = 4 * (60/bpm)  # Máximo de 4 tempos agrupados
+    # Usar o valor de limite_agrupamento passado como parâmetro
+    limite_agrup_quarter = limite_agrupamento * (60/bpm)
     
     for i in range(1, len(notas_com_duracao)):
         nota, dur = notas_com_duracao[i]
         
         # Agrupar apenas se for a mesma nota E a duração não exceder o limite
-        if nota == nota_atual and dur_atual < limite_agrupamento:
+        if nota == nota_atual and dur_atual < limite_agrup_quarter:
             dur_atual += dur
         else:
             # Nova nota, registrar a anterior e começar nova
@@ -227,6 +189,10 @@ def extrair_notas_vocal(caminho_vocal, sr=44100, bpm=120, min_dur=0.05, tom='C',
     
     # Adicionar a última nota
     notas_processadas.append((nota_atual, dur_atual))
+    
+    # Quantização opcional das notas para alinhamento rítmico
+    if quantizar:
+        notas_processadas = quantizar_notas(notas_processadas, bpm, grade_quantizacao)
     
     return notas_processadas
 
