@@ -1,2 +1,6 @@
 venv/
+pretrained_models/
+__pycache__/
+stems/
 NotaLAB.code-workspace
+harmonias_vocais

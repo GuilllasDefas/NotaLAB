@@ -32,7 +32,7 @@ def detectar_tom(sinal, taxa):
     Returns:
         str: Nota base (ex: 'C', 'D#', 'F#')
     '''
-    cromagrama = librosa.feature.chroma_cqt(y=sinal, sr=taxa)
+    cromagrama = librosa.feature.chroma_stft(y=sinal, sr=taxa, n_fft=512)  # ou 256
     media = cromagrama.mean(axis=1)
     notas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
     tom = notas[int(np.argmax(media))]
@@ -50,7 +50,7 @@ def detectar_bpm(sinal, taxa):
         int: BPM estimado, arredondado para o inteiro mais próximo
     '''
     bpm, _ = librosa.beat.beat_track(y=sinal, sr=taxa)
-    return round(bpm)
+    return round(float(bpm))
 
 def detectar_acordes(sinal, taxa):
     '''

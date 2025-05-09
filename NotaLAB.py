@@ -1,5 +1,6 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Ignora avisos do TensorFlow
+
 from pathlib import Path
 from notalab.audio import carregar_audio, detectar_tom, detectar_bpm, detectar_acordes
 from notalab.stems import separar_stems
