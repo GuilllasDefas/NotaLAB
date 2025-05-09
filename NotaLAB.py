@@ -7,13 +7,15 @@ from notalab.stems import separar_stems
 from notalab.notacao import montar_harmonia
 from notalab.harmonia import extrair_notas_vocal, gerar_harmonias_vocais
 from utils.set import selecionar_arquivo
+import warnings
+warnings.filterwarnings("ignore", message="n_fft=1024 is too large for input signal")
 
 """
 Script principal do NotaLAB - Ferramenta de análise e geração musical
 """
 
 def main():
-    print("=== NotaLAB - Análise e Geração Musical ===")
+    print("=== NotaLAB - Análise e Geração Musical ===\n")
     
     # Solicitar ao usuário que selecione o arquivo de áudio
     caminho_audio = selecionar_arquivo()
