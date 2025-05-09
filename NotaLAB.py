@@ -9,6 +9,7 @@ from notalab.harmonia import extrair_notas_vocal, gerar_harmonias_vocais
 from utils.set import selecionar_arquivo
 import warnings
 warnings.filterwarnings("ignore", message="n_fft=1024 is too large for input signal")
+from music21 import midi
 
 """
 Script principal do NotaLAB - Ferramenta de análise e geração musical
@@ -69,8 +70,10 @@ def main():
         
         # Gerar partitura com as harmonias
         partitura = montar_harmonia(harmonias)
-        partitura.show('text')  # mostra no console
-        partitura.write('pdf', 'harmonias_vocais.pdf')
+        mf = midi.translate.streamToMidiFile(partitura)
+        mf.open('harmonias_vocais.mid', 'wb')
+        mf.write()
+        mf.close()
     else:
         print("Não foi possível extrair notas do vocal.")
 
