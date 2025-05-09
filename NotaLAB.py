@@ -70,39 +70,55 @@ def main():
     # Extrair notas do vocal e gerar harmonias automáticas
     print("\nExtraindo notas do vocal e gerando harmonias...")
     
-    # Opção 1: Usar as configurações do config.py
+    # Analisar e obter parâmetros otimizados para este áudio específico
+    print("Analisando áudio para otimizar parâmetros de extração...")
+    params_otimizados = config.analisar_e_ajustar_parametros(sinal, taxa, bpm, tonica, modo)
+    print(f"Parâmetros otimizados para esta música: sensibilidade={params_otimizados['sensibilidade_onset']:.3f}, "
+          f"min_duracao={params_otimizados['min_duracao']:.3f}s, "
+          f"grade={params_otimizados['grade_quantizacao']}")
+    
+    # Usar parâmetros otimizados automaticamente
     notas_melodia = extrair_notas_vocal(
         caminho_vocal, 
         bpm=bpm, 
         tom=tonica, 
         modo=modo,
-        sensibilidade_onset=config.SENSIBILIDADE_ONSET,
-        limite_agrupamento=config.LIMITE_AGRUPAMENTO,
-        min_dur=config.MIN_DURACAO_NOTA,
-        quantizar=config.QUANTIZAR,
-        grade_quantizacao=config.GRADE_QUANTIZACAO,
+        sensibilidade_onset=params_otimizados['sensibilidade_onset'],
+        limite_agrupamento=params_otimizados['limite_agrupamento'],
+        min_dur=params_otimizados['min_duracao'],
+        quantizar=params_otimizados['quantizar'],
+        grade_quantizacao=params_otimizados['grade_quantizacao'],
         # Parâmetros avançados
-        pre_max=config.PRE_MAX,
-        post_max=config.POST_MAX,
-        pre_avg=config.PRE_AVG,
-        post_avg=config.POST_AVG,
-        wait=config.WAIT
+        pre_max=params_otimizados['pre_max'],
+        post_max=params_otimizados['post_max'],
+        pre_avg=params_otimizados['pre_avg'],
+        post_avg=params_otimizados['post_avg'],
+        wait=params_otimizados['wait']
     )
     
-    # Opção 2: Usar configurações específicas de estilo (descomente para usar)
-    # estilo = 'pop'  # Escolha: 'vocal', 'pop', 'jazz', 'classica', 'folk', etc.
-    # config_estilo = config.obter_config_para_estilo(estilo, bpm)
-    # notas_melodia = extrair_notas_vocal(
-    #     caminho_vocal, 
-    #     bpm=bpm, 
-    #     tom=tonica, 
-    #     modo=modo,
-    #     sensibilidade_onset=config_estilo['sensibilidade_onset'],
-    #     limite_agrupamento=config_estilo['limite_agrupamento'],
-    #     min_dur=config_estilo['min_duracao'],
-    #     quantizar=config_estilo['quantizar'],
-    #     grade_quantizacao=config_estilo['grade_quantizacao']
-    # )
+    # Filtragem apenas se houver notas e a filtragem estiver habilitada
+    if notas_melodia and params_otimizados.get('remover_falsos_positivos', False):
+        print("Aplicando filtro para remover falsos positivos e melhorar qualidade...")
+        
+        # Informações de debug para entender o formato das notas
+        print(f"Formato das notas extraídas: {type(notas_melodia[0]) if notas_melodia else 'lista vazia'}")
+        
+        try:
+            notas_melodia_filtradas = config.filtrar_falsos_positivos(
+                notas_melodia,
+                energia_minima=params_otimizados.get('energia_minima', 0.15),
+                duracao_minima=params_otimizados['min_duracao'],
+                distancia_minima=params_otimizados.get('wait', 0.03) / 2  # Usamos um valor mais conservador
+            )
+            
+            diferenca = len(notas_melodia) - len(notas_melodia_filtradas)
+            if diferenca > 0:
+                print(f"Filtro removeu {diferenca} nota(s) que provavelmente eram falso(s) positivo(s)")
+            
+            notas_melodia = notas_melodia_filtradas
+        except Exception as e:
+            print(f"Erro ao filtrar notas: {str(e)}")
+            print("Continuando com as notas originais sem filtragem.")
     
     if notas_melodia:
         print(f"Extraídas {len(notas_melodia)} notas da melodia vocal")

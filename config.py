@@ -310,3 +310,205 @@ def obter_config_para_estilo(estilo, bpm=None):
             config['grade_quantizacao'] = max(config['grade_quantizacao'], 16)
     
     return config
+
+# Função para análise automática e ajuste de parâmetros
+import numpy as np
+import librosa
+
+def analisar_e_ajustar_parametros(sinal, taxa, bpm, tonica=None, modo=None):
+    """
+    Analisa características do áudio e retorna parâmetros otimizados
+    
+    Args:
+        sinal: array do sinal de áudio
+        taxa: taxa de amostragem em Hz
+        bpm: batidas por minuto (se já calculado)
+        tonica: nota tônica (opcional)
+        modo: modo musical (opcional)
+        
+    Returns:
+        dict: Dicionário com parâmetros otimizados
+    """
+    # Inicializa com valores padrão (conservadores)
+    params = {
+        'sensibilidade_onset': SENSIBILIDADE_ONSET,
+        'min_duracao': MIN_DURACAO_NOTA,
+        'limite_agrupamento': LIMITE_AGRUPAMENTO,
+        'quantizar': QUANTIZAR,
+        'grade_quantizacao': GRADE_QUANTIZACAO,
+        'pre_max': PRE_MAX,
+        'post_max': POST_MAX,
+        'pre_avg': PRE_AVG,
+        'post_avg': POST_AVG,
+        'wait': WAIT,
+        'voiced_threshold': VOICED_THRESHOLD,
+        'remover_falsos_positivos': False
+    }
+    
+    # 1. Análise de densidade rítmica
+    onset_env = librosa.onset.onset_strength(y=sinal, sr=taxa)
+    onsets = librosa.onset.onset_detect(onset_envelope=onset_env, sr=taxa)
+    if len(onsets) > 0:
+        densidade_onset = len(onsets) / (len(sinal) / taxa)
+    else:
+        densidade_onset = 0.5
+    
+    # 2. Análise da estrutura harmônica para identificar música coral/polifônica
+    chroma = librosa.feature.chroma_cqt(y=sinal, sr=taxa)
+    notas_por_frame = np.mean(np.sum(chroma > 0.3, axis=0))
+    variacao_harmonica = np.mean(np.std(chroma, axis=1))
+    
+    # Análise adicional das características vocais
+    centroide = np.mean(librosa.feature.spectral_centroid(y=sinal, sr=taxa))
+    zcr = np.mean(librosa.feature.zero_crossing_rate(y=sinal))
+    
+    # 3. Análise de percussividade vs. harmonicidade
+    y_harmonic, y_percussive = librosa.effects.hpss(sinal)
+    energia_harmonica = np.sum(y_harmonic**2)
+    energia_percussiva = np.sum(y_percussive**2)
+    razao_percussiva = energia_percussiva / (energia_harmonica + energia_percussiva + 1e-10)
+    
+    e_coral = False
+    tipo_coral = None
+    
+    if notas_por_frame > 1.8 and variacao_harmonica < 0.3 and razao_percussiva < 0.4:
+        e_coral = True
+        if zcr > 0.1 and centroide > 3000:
+            tipo_coral = "agudo"
+        elif zcr < 0.05 and centroide < 2000:
+            tipo_coral = "grave"
+        else:
+            tipo_coral = "misto"
+        
+        print(f"Características de música coral/polifônica detectadas (tipo: {tipo_coral})")
+    
+    if e_coral:
+        params['quantizar'] = True
+        if tipo_coral == "agudo":
+            params['sensibilidade_onset'] = 0.032
+            params['min_duracao'] = 0.075
+            params['limite_agrupamento'] = 4
+            params['wait'] = 0.022
+            params['grade_quantizacao'] = 8
+        elif tipo_coral == "grave":
+            params['sensibilidade_onset'] = 0.038
+            params['min_duracao'] = 0.1
+            params['limite_agrupamento'] = 5
+            params['wait'] = 0.028
+            params['grade_quantizacao'] = 8
+        else:
+            params['sensibilidade_onset'] = 0.034
+            params['min_duracao'] = 0.085
+            params['limite_agrupamento'] = 4
+            params['wait'] = 0.024
+            params['grade_quantizacao'] = 8
+        
+        params['pre_max'] = 0.04
+        params['post_max'] = 0.035
+        params['pre_avg'] = 0.07
+        params['post_avg'] = 0.06
+        
+        if bpm < 80:
+            params['sensibilidade_onset'] = min(0.045, params['sensibilidade_onset'] + 0.008)
+            params['min_duracao'] = params['min_duracao'] * 1.2
+            params['limite_agrupamento'] += 1
+            params['grade_quantizacao'] = 4
+        elif bpm > 120:
+            params['sensibilidade_onset'] = max(0.025, params['sensibilidade_onset'] - 0.005)
+            params['min_duracao'] = max(0.05, params['min_duracao'] * 0.9)
+            params['wait'] = max(0.015, params['wait'] - 0.005)
+            params['grade_quantizacao'] = 16
+            
+        if densidade_onset > 2.0:
+            params['sensibilidade_onset'] = max(0.028, params['sensibilidade_onset'] - 0.004)
+            params['limite_agrupamento'] = max(2, params['limite_agrupamento'] - 1)
+        elif densidade_onset < 1.0:
+            params['sensibilidade_onset'] = min(0.05, params['sensibilidade_onset'] + 0.005)
+            params['limite_agrupamento'] += 1
+            params['min_duracao'] = params['min_duracao'] * 1.1
+    else:
+        if bpm < 90:
+            params['sensibilidade_onset'] = min(0.05, SENSIBILIDADE_ONSET + 0.01)
+            params['min_duracao'] = max(0.06, 60 / (bpm * 8))
+            params['grade_quantizacao'] = 8
+        elif bpm > 120:
+            params['sensibilidade_onset'] = max(0.025, SENSIBILIDADE_ONSET - 0.01)
+            params['min_duracao'] = max(0.02, 60 / (bpm * 12))
+            params['grade_quantizacao'] = 16
+    
+    if e_coral:
+        if 85 <= bpm <= 105:
+            params['grade_quantizacao'] = 8
+            if bpm % 4 > 2:
+                params['quantizar'] = True
+        
+        if variacao_harmonica < 0.15:
+            params['limite_agrupamento'] = min(8, params['limite_agrupamento'] + 1)
+            params['min_duracao'] = params['min_duracao'] * 1.05
+            
+        if tonica in ['C', 'F', 'G', 'D'] and modo == 'maior':
+            params['min_duracao'] = params['min_duracao'] * 1.05
+            params['pre_avg'] = min(0.09, params['pre_avg'] + 0.01)
+    
+    return params
+
+# Função simplificada para filtragem de falsos positivos
+def filtrar_falsos_positivos(notas, energia_minima=0.15, duracao_minima=0.05, distancia_minima=0.1):
+    """
+    Filtra notas que provavelmente são falsos positivos com base no formato de dados disponíveis
+    
+    Args:
+        notas: lista de notas extraídas
+        energia_minima: energia mínima para considerar uma nota válida (não utilizada na versão simplificada)
+        duracao_minima: duração mínima em segundos (não utilizada na versão simplificada)
+        distancia_minima: distância mínima entre notas (em segundos)
+        
+    Returns:
+        list: lista de notas filtradas, no mesmo formato da entrada
+    """
+    if not notas:
+        return []
+    
+    # Verifica o formato das notas
+    primeiro_item = notas[0]
+    formato_tupla = isinstance(primeiro_item, tuple)
+    
+    print(f"Formato de dados detectado: {'Tupla' if formato_tupla else 'Dicionário'}")
+    if formato_tupla:
+        print(f"Tamanho da tupla: {len(primeiro_item)}")
+        print(f"Exemplo do primeiro item: {primeiro_item}")
+    
+    if formato_tupla and len(primeiro_item) <= 2:
+        print("Formato de tupla simples detectado. Aplicando filtragem básica.")
+        
+        notas_ordenadas = sorted(notas, key=lambda x: x[1] if len(x) > 1 else 0)
+        notas_filtradas = []
+        
+        ultima_nota = None
+        ultimo_tempo = 0
+        
+        for nota in notas_ordenadas:
+            if len(nota) < 2:
+                continue
+                
+            pitch = nota[0]
+            tempo = nota[1]
+            
+            if ultima_nota is None or (tempo - ultimo_tempo) >= distancia_minima or pitch == 'rest':
+                notas_filtradas.append(nota)
+                ultima_nota = pitch
+                ultimo_tempo = tempo
+            else:
+                if pitch == ultima_nota:
+                    continue
+                else:
+                    notas_filtradas.append(nota)
+                    ultima_nota = pitch
+                    ultimo_tempo = tempo
+                    
+        print(f"Filtragem básica: {len(notas)} notas originais -> {len(notas_filtradas)} após filtragem")
+        return notas_filtradas
+    
+    print("Formato de dados completo detectado. Aplicando filtragem avançada.")
+    
+    return notas_filtradas
