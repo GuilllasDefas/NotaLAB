@@ -36,3 +36,8 @@ def detectar_tom(sinal, taxa):
     notas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
     tom = notas[int(np.argmax(media))]
     return tom
+
+# Estima o BPM (batidas por minuto)
+def detectar_bpm(sinal, taxa):
+    bpm, _ = librosa.beat.beat_track(y=sinal, sr=taxa)
+    return round(bpm)
