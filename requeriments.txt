@@ -1,4 +1,17 @@
+# trava o numpy pra não quebrar o chroma do librosa
 numpy==1.23.5
+
+# reconhecimento de tom e BPM
 librosa==0.11.0
+
+# runtime do TensorFlow
+tensorflow==2.12.1
+
+# I/O do TF (força a última disponível p/ Win+3.11)
+tensorflow-io-gcs-filesystem==0.31.0
+
+# separação de stems
 spleeter==2.4.2
+
+# montagem de notas e acordes
 music21==9.5.0
