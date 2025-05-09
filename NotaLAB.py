@@ -66,20 +66,9 @@ def main():
         # Gerar partitura com as harmonias
         partitura = montar_harmonia(harmonias)
         partitura.show('text')  # mostra no console
-        
-        # Opcional: salvar a partitura como MIDI ou PDF
-        # partitura.write('midi', 'harmonias_vocais.mid')
+        partitura.write('midi', 'harmonias_vocais.pdf')
     else:
-        print("Não foi possível extrair notas do vocal. Usando exemplo manual:")
-        
-        # Exemplo de harmonia manual como fallback
-        exemplo = {
-            'Soprano': [('C4', 1), ('E4', 1)],
-            'Contralto': [('A3', 1), ('B3', 1)],
-            'Tenor': [('F3', 1), ('G3', 1)]
-        }
-        partitura = montar_harmonia(exemplo)
-        partitura.show('text')  # mostra no console
+        print("Não foi possível extrair notas do vocal.")
 
 if __name__ == '__main__':
     main()
