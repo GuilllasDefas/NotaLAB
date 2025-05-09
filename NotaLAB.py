@@ -4,13 +4,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Ignora avisos do TensorFlow
 from pathlib import Path
 from notalab.audio import carregar_audio, detectar_tom, detectar_bpm, detectar_acordes
 from notalab.stems import separar_stems
-from notalab.notacao import montar_harmonia
+from notalab.notacao import montar_harmonia, montar_acordes
 from notalab.harmonia import extrair_notas_vocal, gerar_harmonias_vocais
 from utils.set import selecionar_arquivo
-import warnings
-warnings.filterwarnings("ignore", message="n_fft=1024 is too large for input signal")
 from music21 import midi
+import warnings
 
+warnings.filterwarnings("ignore", message="n_fft=1024 is too large for input signal")
+warnings.filterwarnings("ignore", message="n_fft=256 is too large for input signal")
+warnings.filterwarnings("ignore", message="WARNING:tensorflow:From")
 """
 Script principal do NotaLAB - Ferramenta de análise e geração musical
 """
@@ -37,10 +39,12 @@ def main():
     
     # Analisa características do áudio
     print('\nAnalisando áudio...')
-    print('Tom:', detectar_tom(sinal, taxa))
-    print('BPM:', detectar_bpm(sinal, taxa))
+    tonica, modo = detectar_tom(sinal, taxa)
+    print(f'Tonalidade: {tonica} {modo}')
+    bpm = detectar_bpm(sinal, taxa)
+    print('BPM:', bpm)
 
-    acordes_idx = detectar_acordes(sinal, taxa)
+    acordes_idx = detectar_acordes(sinal, taxa, bpm=bpm)
     notas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
     acordes_nomes = [notas[idx] for idx in acordes_idx]
     print('Acordes detectados:', ', '.join(acordes_nomes))
@@ -62,14 +66,17 @@ def main():
     
     # Extrair notas do vocal e gerar harmonias automáticas
     print("\nExtraindo notas do vocal e gerando harmonias...")
-    notas_melodia = extrair_notas_vocal(caminho_vocal)
+    notas_melodia = extrair_notas_vocal(caminho_vocal, bpm=bpm, tom=tonica, modo=modo)
     
     if notas_melodia:
         print(f"Extraídas {len(notas_melodia)} notas da melodia vocal")
-        harmonias = gerar_harmonias_vocais(notas_melodia)
-        
-        # Gerar partitura com as harmonias
+        harmonias = gerar_harmonias_vocais(notas_melodia, tom=tonica, modo=modo)
         partitura = montar_harmonia(harmonias)
+
+        # Não adicione acordes extras aqui!
+        # O MIDI agora respeita momentos de notas únicas e acordes
+
+        # Exportar para arquivo MIDI
         mf = midi.translate.streamToMidiFile(partitura)
         mf.open('harmonias_vocais.mid', 'wb')
         mf.write()
