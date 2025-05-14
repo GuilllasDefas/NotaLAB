@@ -2,7 +2,8 @@
 Funções auxiliares para ajuste de ritmo e tempo na extração de notas.
 Utiliza as configurações centralizadas em config.py
 """
-import config
+import config.config as config
+
 
 def calcular_grade_subdivisao(bpm):
     """
@@ -16,6 +17,7 @@ def calcular_grade_subdivisao(bpm):
     else:
         return 32   # BPM rápido: use fusas
 
+
 def ajustar_sensibilidade_onset(tipo_musica):
     """
     Retorna a sensibilidade de onset recomendada para o estilo musical.
@@ -23,6 +25,7 @@ def ajustar_sensibilidade_onset(tipo_musica):
     """
     config_estilo = config.obter_config_para_estilo(tipo_musica)
     return config_estilo['sensibilidade_onset']
+
 
 def recomendar_config_ritmo(bpm, tipo_musica='vocal'):
     """
