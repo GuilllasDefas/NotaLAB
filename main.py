@@ -14,16 +14,8 @@ projeto_dir = Path(__file__).parent
 sys.path.insert(0, str(projeto_dir))
 
 # Importa os módulos principais
-from src.cli.app import main as cli_main
+from src.cli.app import main
 from config.config import obter_config_para_estilo
-
-
-def main():
-    """Função principal que inicia a aplicação NotaLAB"""
-    print("Iniciando NotaLAB - Análise e Transcrição Musical")
-    
-    # Inicia a interface de linha de comando
-    cli_main()
 
 
 if __name__ == "__main__":
