@@ -8,5 +8,9 @@ Problemas
 
 Implementar depois
 
+<<<<<<< HEAD:Problemas
 - Extrair acordes da música como um todo, criando um arquivo .mid
 - Adicionar tqdm para acompanhar o andamento da análise
+=======
+- Extrair acordes da música criando um arquivo .mid
+>>>>>>> refact-v1:docs/Problemas
