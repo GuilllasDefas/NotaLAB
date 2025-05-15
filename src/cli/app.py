@@ -8,12 +8,12 @@ from pathlib import Path
 from music21 import midi
 
 import config.config as config
-from notalab.audio import (carregar_audio, detectar_acordes, detectar_bpm,
+from src.notalab.audio import (carregar_audio, detectar_acordes, detectar_bpm,
                            detectar_tom)
-from notalab.harmonia import extrair_notas_vocal, gerar_harmonias_vocais
-from notalab.notacao import montar_acordes, montar_harmonia
-from notalab.stems import separar_stems
-from utils.set import selecionar_arquivo
+from src.notalab.harmonia import extrair_notas_vocal, gerar_harmonias_vocais
+from src.notalab.notacao import montar_acordes, montar_harmonia
+from src.notalab.stems import separar_stems
+from src.utils.set import selecionar_arquivo
 
 warnings.filterwarnings(
     'ignore', message='n_fft=1024 is too large for input signal'
@@ -98,20 +98,6 @@ def main():
         wait=config.WAIT,
     )
 
-    # Opção 2: Usar configurações específicas de estilo (descomente para usar)
-    # estilo = 'pop'  # Escolha: 'vocal', 'pop', 'jazz', 'classica', 'folk', etc.
-    # config_estilo = config.obter_config_para_estilo(estilo, bpm)
-    # notas_melodia = extrair_notas_vocal(
-    #     caminho_vocal,
-    #     bpm=bpm,
-    #     tom=tonica,
-    #     modo=modo,
-    #     sensibilidade_onset=config_estilo['sensibilidade_onset'],
-    #     limite_agrupamento=config_estilo['limite_agrupamento'],
-    #     min_dur=config_estilo['min_duracao'],
-    #     quantizar=config_estilo['quantizar'],
-    #     grade_quantizacao=config_estilo['grade_quantizacao']
-    # )
 
     if notas_melodia:
         print(f'Extraídas {len(notas_melodia)} notas da melodia vocal')
@@ -120,14 +106,23 @@ def main():
         )
         partitura = montar_harmonia(harmonias)
 
-        # Não adicione acordes extras aqui!
-        # O MIDI agora respeita momentos de notas únicas e acordes
-
+        # Obtém o caminho para a raiz do projeto (2 níveis acima de src/cli)
+        projeto_root = Path(__file__).parent.parent.parent
+        
+        # Cria o diretório data na raiz do projeto
+        data_dir = projeto_root / 'data'
+        data_dir.mkdir(exist_ok=True)
+        
+        # Caminho completo para o arquivo MIDI na pasta data
+        caminho_midi = data_dir / 'harmonias_vocais.mid'
+        
         # Exportar para arquivo MIDI
         mf = midi.translate.streamToMidiFile(partitura)
-        mf.open('harmonias_vocais.mid', 'wb')
+        mf.open(str(caminho_midi), 'wb')
         mf.write()
         mf.close()
+        
+        print(f'Arquivo MIDI salvo em: {caminho_midi}')
     else:
         print('Não foi possível extrair notas do vocal.')
 

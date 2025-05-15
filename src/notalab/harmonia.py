@@ -3,7 +3,7 @@ import numpy as np
 from music21 import pitch
 
 import config.config as config
-from notalab.audio import carregar_audio
+from src.notalab.audio import carregar_audio
 
 
 def quantizar_notas(notas_duracao, bpm, grade=16, ativar=True):
